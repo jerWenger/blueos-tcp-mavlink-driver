@@ -51,10 +51,7 @@ class Mavlink2RestClient:
 
 
 def process_command(incoming_command):
-    return tuple(
-        int(num)
-        for num in incoming_command.replace("(", "")
-        .replace(")", "")
-        .replace("...", "")
-        .split(", ")
+    nums = (
+        incoming_command.replace("(", "").replace(")", "").replace("...", "").split(",")
     )
+    return tuple(int(num.strip()) for num in nums)

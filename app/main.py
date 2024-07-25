@@ -11,6 +11,7 @@ import socket
 import signal
 import threading
 import queue
+import os
 import RC_OVERRIDE.Thruster_Control as thrusters
 import RC_OVERRIDE.RC_receiver as RC
 import READ_MESSAGE.messaging as messaging
@@ -58,41 +59,69 @@ def frontseat_net_com(mavlink_messenger, to_backseat, to_frontseat):
         time.sleep(0.1)
 
 
-def backseat_net_com(backseat, to_backseat, to_frontseat):
-    # Get message from frontseat queue, process it, and send it to the backseat
+def backseat_net_com(backseat, to_backseat, to_frontseat, HOST, PORT):
     while True:
-        # Get data from frontseat queue
         try:
-            newest_nmea = to_backseat.get(timeout=0.1)
-        except queue.Empty:
-            newest_nmea = "No New Data"
-            continue
+            conn, addr = backseat.accept()
+            print(f"Connected to {addr}")
 
-        # Read Messages from frontseat and send via network
-        try:
-            for key in newest_nmea:
-                backseat.send(str(newest_nmea[key]).encode("utf-8"))
-            backseat.send("***".encode("utf-8"))
-        except (BrokenPipeError, ConnectionResetError):
-            print("Connection to backseat lost")
-            break
+            while True:
+                try:
+                    # Get data from frontseat queue
+                    try:
+                        newest_nmea = to_backseat.get(timeout=0.1)
+                    except queue.Empty:
+                        newest_nmea = "No New Data"
+                        continue
 
-        try:
-            incoming_command = messaging.process_command(
-                backseat.recv(1024).decode("utf-8")
-            )
-        except:
-            incoming_command = "(1500, 1500)"
-            print("Error receiving data from backseat")
+                    # Read Messages from frontseat and send via network
+                    try:
+                        for key in newest_nmea:
+                            conn.send(str(newest_nmea[key]).encode("utf-8"))
+                        conn.send("***".encode("utf-8"))
+                    except (BrokenPipeError, ConnectionResetError):
+                        print("Connection to backseat lost. Closing connection...")
+                        try:
+                            conn.close()
+                        except Exception as e:
+                            print(f"Error closing connection: {e}")
+                        break  # Exit the inner loop and wait for a new connection
 
-        try:
-            to_frontseat.put_nowait(incoming_command)
-        except:
-            print("Error putting data in to_frontseat queue")
-            to_frontseat.get()
-            to_frontseat.put_nowait(incoming_command)
+                    try:
+                        incoming_command = messaging.process_command(
+                            conn.recv(1024).decode("utf-8")
+                        )
+                    except Exception as e:
+                        print(f"Error receiving data from backseat: {e}")
+                        incoming_command = "(1500, 1500)"
 
-        time.sleep(0.2)
+                    try:
+                        to_frontseat.put_nowait(incoming_command)
+                    except:
+                        print("Error putting data in to_frontseat queue")
+                        to_frontseat.get()
+                        to_frontseat.put_nowait(incoming_command)
+
+                except Exception as e:
+                    print(f"Error in backseat_net_com: {e}")
+                    break  # Exit the inner loop and wait for a new connection
+
+        except Exception as e:
+            print(f"Error accepting connection: {e}")
+
+            # Restart the server socket
+            try:
+                backseat.close()
+            except Exception as e:
+                print(f"Error closing server socket: {e}")
+
+            print("Restarting server socket...")
+            backseat = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            backseat.bind((HOST, PORT))
+            backseat.listen(1)
+            print(f"Server listening on {HOST}:{PORT}")
+
+            time.sleep(5)  # Wait for 5 seconds before trying again
 
 
 def main():
@@ -100,7 +129,12 @@ def main():
     boat_url = (
         "http://blueos.local/mavlink2rest/mavlink/vehicles/1/components/1/messages/"
     )
-    desired_message_list = ["RC_CHANNELS", "HEARTBEAT"]
+    desired_message_list = [
+        "RC_CHANNELS",
+        "HEARTBEAT",
+        "GLOBAL_POSITION_INT",
+        "BATTERY_STATUS",
+    ]
     remote_initialized = False
     newest_message = {}
 
@@ -118,7 +152,9 @@ def main():
     to_frontseat = queue.Queue(maxsize=2)
 
     # Code here to start communication with backseat
-    HOST = "0.0.0.0"
+    # HOST = "127.0.0.1"
+    HOST = os.environ.get("HOST_IP")
+    print(HOST)
     PORT = 9090
 
     backseat = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -126,9 +162,13 @@ def main():
     backseat.listen(1)
 
     print(f"Server listening on {HOST}:{PORT}")
-    client_socket, addr = backseat.accept()
-    print(f"Got connection from {addr}")
 
+    backseat_thread = threading.Thread(
+        target=backseat_net_com,
+        args=(backseat, to_backseat, to_frontseat, HOST, PORT),
+    )
+
+    backseat_thread.start()
     # Make sure there is an option for sending a seperate stream of all sensor data
     # Make sure there is an option for sending over the serial / usb data for added sensors
     # Code to initialize shutdowns
@@ -148,16 +188,12 @@ def main():
             remote_initialized = True
         time.sleep(1)
 
-    # Once we have the RC inputs, we can start the threads
+    # Once we have the RC inputs, we can start the frontseat thread
     frontseat_thread = threading.Thread(
         target=frontseat_net_com, args=(mavlink_messenger, to_backseat, to_frontseat)
     )
-    backseat_thread = threading.Thread(
-        target=backseat_net_com, args=(client_socket, to_backseat, to_frontseat)
-    )
 
     frontseat_thread.start()
-    backseat_thread.start()
 
 
 if __name__ == "__main__":

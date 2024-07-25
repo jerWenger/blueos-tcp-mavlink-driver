@@ -1,26 +1,24 @@
 FROM python:3.9-slim-bullseye
 
-# Install system dependencies for lxml and other potential build requirements
-
 COPY app /app
 
 WORKDIR /app
 
 LABEL version="1.0.1"
 
+EXPOSE 80 9090
+
 LABEL permissions='{\
   "ExposedPorts": {\
-  "80/tcp": {}\
+  "80/tcp": {},\
+  "9090/tcp": {}\
   },\
   "HostConfig": {\
   "ExtraHosts": ["host.docker.internal:host-gateway"],\
   "PortBindings": {\
-  "80/tcp": [\
-  {\
-  "HostPort": ""\
-  }\
-  ]\
-  }\
+  "80/tcp": [{"HostIP": ""}],\
+  "9090/tcp": [{"HostPort": "9090", "HostIP": ""}]\
+  },\
   }\
   }'
 
@@ -37,8 +35,10 @@ LABEL links='{\
   }'
 LABEL requirements="core >= 1.1"
 
-EXPOSE 80
+RUN apt-get update && apt-get install -y net-tools
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-ENTRYPOINT ["sh", "-c", "python -u -m main"]
+RUN chmod +x get_host_ip.sh
+
+ENTRYPOINT ["/app/get_host_ip.sh"]
