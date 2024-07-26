@@ -59,11 +59,12 @@ def frontseat_net_com(mavlink_messenger, to_backseat, to_frontseat):
         time.sleep(0.1)
 
 
-def backseat_net_com(backseat, to_backseat, to_frontseat, HOST, PORT):
+def backseat_net_com(to_backseat, to_frontseat, HOST, PORT):
     while True:
         try:
-            conn, addr = backseat.accept()
-            print(f"Connected to {addr}")
+            backseat = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            backseat.connect((HOST, PORT))
+            print(f"Connected and communicating on {HOST}:{PORT}")
 
             while True:
                 try:
@@ -77,19 +78,19 @@ def backseat_net_com(backseat, to_backseat, to_frontseat, HOST, PORT):
                     # Read Messages from frontseat and send via network
                     try:
                         for key in newest_nmea:
-                            conn.send(str(newest_nmea[key]).encode("utf-8"))
-                        conn.send("***".encode("utf-8"))
+                            backseat.send(str(newest_nmea[key]).encode("utf-8"))
+                        backseat.send("***".encode("utf-8"))
                     except (BrokenPipeError, ConnectionResetError):
                         print("Connection to backseat lost. Closing connection...")
                         try:
-                            conn.close()
+                            backseat.close()
                         except Exception as e:
                             print(f"Error closing connection: {e}")
                         break  # Exit the inner loop and wait for a new connection
 
                     try:
                         incoming_command = messaging.process_command(
-                            conn.recv(1024).decode("utf-8")
+                            backseat.recv(1024).decode("utf-8")
                         )
                     except Exception as e:
                         print(f"Error receiving data from backseat: {e}")
@@ -103,31 +104,19 @@ def backseat_net_com(backseat, to_backseat, to_frontseat, HOST, PORT):
                         to_frontseat.put_nowait(incoming_command)
 
                 except Exception as e:
-                    print(f"Error in backseat_net_com: {e}")
-                    break  # Exit the inner loop and wait for a new connection
+                    print("Connection to server lost. Closing connection...")
+                    backseat.close()
+                    break  # Exit the inner loop and attempt to reconnect
 
         except Exception as e:
-            print(f"Error accepting connection: {e}")
-
-            # Restart the server socket
-            try:
-                backseat.close()
-            except Exception as e:
-                print(f"Error closing server socket: {e}")
-
-            print("Restarting server socket...")
-            backseat = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            backseat.bind((HOST, PORT))
-            backseat.listen(1)
-            print(f"Server listening on {HOST}:{PORT}")
-
+            print(f"Error connecting to server: {e}")
             time.sleep(5)  # Wait for 5 seconds before trying again
 
 
 def main():
     # Input parameters
     boat_url = (
-        "http://blueos.local/mavlink2rest/mavlink/vehicles/1/components/1/messages/"
+        "http://192.168.31.1/mavlink2rest/mavlink/vehicles/1/components/1/messages/"
     )
     desired_message_list = [
         "RC_CHANNELS",
@@ -152,20 +141,13 @@ def main():
     to_frontseat = queue.Queue(maxsize=2)
 
     # Code here to start communication with backseat
-    # HOST = "127.0.0.1"
-    HOST = os.environ.get("HOST_IP")
+    HOST = "192.168.1.3"
     print(HOST)
     PORT = 9090
 
-    backseat = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    backseat.bind((HOST, PORT))
-    backseat.listen(1)
-
-    print(f"Server listening on {HOST}:{PORT}")
-
     backseat_thread = threading.Thread(
         target=backseat_net_com,
-        args=(backseat, to_backseat, to_frontseat, HOST, PORT),
+        args=(to_backseat, to_frontseat, HOST, PORT),
     )
 
     backseat_thread.start()

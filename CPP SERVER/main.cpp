@@ -6,8 +6,7 @@
 
 using boost::asio::ip::tcp;
 
-const std::string REMOTE_HOST = "192.168.31.1";
-const unsigned short REMOTE_PORT = 9090;
+const unsigned short LOCAL_PORT = 9090;
 
 void broadcast(tcp::socket &socket)
 {
@@ -81,16 +80,24 @@ void handle(tcp::socket socket)
 
 void receive()
 {
-    boost::asio::io_context io_context;
-    tcp::resolver resolver(io_context);
-    tcp::resolver::results_type endpoints = resolver.resolve(REMOTE_HOST, std::to_string(REMOTE_PORT));
-    tcp::socket socket(io_context);
-    boost::asio::connect(socket, endpoints);
+    try
+    {
+        boost::asio::io_context io_context;
+        tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), LOCAL_PORT));
 
-    std::cout << "Connected with " << REMOTE_HOST << std::endl;
+        std::cout << "Server is ready and listening on port " << LOCAL_PORT << "..." << std::endl;
 
-    std::thread t(handle, std::move(socket));
-    t.join();
+        tcp::socket socket(io_context);
+        acceptor.accept(socket);
+        std::cout << "Connection accepted." << std::endl;
+
+        std::thread t(handle, std::move(socket));
+        t.join();
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Exception: " << e.what() << std::endl;
+    }
 }
 
 int main()
