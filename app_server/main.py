@@ -195,7 +195,7 @@ def main():
     desired_message_queue = queue.Queue(maxsize=2)
 
     # Code here to start communication with backseat
-    HOST = "192.168.1.2"
+    HOST = "0.0.0.0"
     print(HOST)
     PORT = 29217
 

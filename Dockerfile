@@ -13,11 +13,6 @@ LABEL permissions='{\
   "80/tcp": {},\
   "29217/tcp": {}\
   },\
-  "HostConfig": {\
-  "ExtraHosts": ["host.docker.internal:host-gateway"],\
-  "PortBindings": {\
-  "80/tcp": [{"HostIP": ""}],\
-  "29217/tcp": [{"HostPort": "29217", "HostIP": ""}]\
   },\
   }\
   }'
