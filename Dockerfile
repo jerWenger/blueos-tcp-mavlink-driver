@@ -23,10 +23,10 @@ LABEL company='{\
   "email": "jwenger@mit.edu"\
   }'
 LABEL type="example"
-LABEL readme='https://raw.githubusercontent.com/jerWenger/blueos-mavlink-parser/blob/main/README.md'
+LABEL readme='https://github.com/jerWenger/blueos-tcp-mavlink-driver/blob/main/readme.md'
 LABEL links='{\
-  "website": "https://github.com/jerWenger/blueos-mavlink-parser/tree/main",\
-  "support": "https://github.com/jerWenger/blueos-mavlink-parser/tree/main"\
+  "website": "https://github.com/jerWenger/blueos-tcp-mavlink-driver",\
+  "support": "https://github.com/jerWenger/blueos-tcp-mavlink-driver"\
   }'
 LABEL requirements="core >= 1.1"
 
