@@ -3,8 +3,8 @@ import threading
 import random
 import time
 
-REMOTE_HOST = "192.168.1.5"
-REMOTE_PORT = 9090
+REMOTE_HOST = "192.168.1.2"
+REMOTE_PORT = 29217
 
 
 def broadcast(client_socket):
@@ -17,8 +17,16 @@ def broadcast(client_socket):
     if operation == 2:
         outgoing = (1500 - 10 * left_scalar, 1500 - 10 * right_scalar)
 
-    client_socket.send(f"{outgoing}".encode("utf-8"))
-    print(f"Sent: {outgoing}")
+    msg = f"BBTMS,{outgoing[0]},{outgoing[1]},0"
+
+    checksum = 0
+    for char in msg[1:]:
+        checksum ^= ord(char)
+
+    msg = "$" + msg + "*" + str(checksum) + "\r\n"
+
+    client_socket.send(f"{msg}".encode("utf-8"))
+    print(f"Sent: {msg}")
 
 
 def handle(client_socket):

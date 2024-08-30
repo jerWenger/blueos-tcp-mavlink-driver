@@ -168,7 +168,7 @@ def handle_client(client_socket, to_backseat, to_frontseat, desired_message_queu
 def main():
     # Input parameters
     boat_url = (
-        "http://192.168.31.1/mavlink2rest/mavlink/vehicles/1/components/1/messages/"
+        "http://blueos.local/mavlink2rest/mavlink/vehicles/1/components/1/messages/"
     )
     desired_message_list = [
         "RC_CHANNELS",
