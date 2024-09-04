@@ -1,1 +1,3 @@
 .venv/
+app_server/RC_OVERRIDE/__pycache__
+app_server/READ_MESSAGE/__pycache__
