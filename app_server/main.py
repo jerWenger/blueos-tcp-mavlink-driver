@@ -20,24 +20,25 @@ import READ_MESSAGE.messaging as messaging
 def frontseat_net_com(
     mavlink_messenger, to_backseat, to_frontseat, desired_message_queue
 ):
+    # Check for new message list
+    try:
+        newest_message_list = desired_message_queue.get(timeout=0.05)
+        mavlink_messenger.set_desired_messages(newest_message_list)
+    except queue.Empty:
+        print("desired message queue is empty")
+
     # Code to get data from the backseat queue, process it, and send it to the frontseat
     last_message = [0, 0, 0]
     while True:
-        # Check for new message list
-        try:
-            newest_message_list = desired_message_queue.get(timeout=0.05)
-            mavlink_messenger.set_desired_messages(newest_message_list)
-        except queue.Empty:
-            pass
-
         # Get autopilot data from backseat
         try:
-            autopilot_data = to_frontseat.get(timeout=0.1)
+            autopilot_data = to_frontseat.get(timeout=0.001)
 
             # Process autopilot data
         except queue.Empty:
             # Use slightly old data
             autopilot_data = last_message
+            print("couldnt get autopilot data")
 
         # Get new data from mavlink
         try:
@@ -78,7 +79,8 @@ def frontseat_net_com(
             to_backseat.get()
             # Add the new message to the queue
             to_backseat.put_nowait(newest_nmea)
-        time.sleep(0.1)
+            print("queue to backseat full")
+        time.sleep(0.01)
 
 
 def backseat_net_com(desired_message_queue, to_backseat, to_frontseat, HOST, PORT):
@@ -167,9 +169,7 @@ def handle_client(client_socket, to_backseat, to_frontseat, desired_message_queu
 
 def main():
     # Input parameters
-    boat_url = (
-        "http://blueos.local/mavlink2rest/mavlink/vehicles/1/components/1/messages/"
-    )
+    boat_url = "http://127.0.0.1/mavlink2rest/mavlink/vehicles/1/components/1/messages/"
     desired_message_list = [
         "RC_CHANNELS",
         "HEARTBEAT",
@@ -182,7 +182,6 @@ def main():
 
     # Startup
     thrusters.set_servo_params()  # Thrusters should be refactored to be a class like messaging
-
     signal.signal(signal.SIGINT, thrusters.signal_handler)
 
     mavlink_messenger = messaging.Mavlink2RestClient(boat_url, desired_message_list)
@@ -195,7 +194,7 @@ def main():
     desired_message_queue = queue.Queue(maxsize=2)
 
     # Code here to start communication with backseat
-    HOST = "0.0.0.0"
+    HOST = "192.168.31.1"
     print(HOST)
     PORT = 29217
 

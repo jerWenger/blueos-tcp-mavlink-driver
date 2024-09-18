@@ -3,7 +3,7 @@ import threading
 import random
 import time
 
-REMOTE_HOST = "192.168.1.2"
+REMOTE_HOST = "192.168.31.1"
 REMOTE_PORT = 29217
 
 

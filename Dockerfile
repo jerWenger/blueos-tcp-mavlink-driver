@@ -6,6 +6,8 @@ WORKDIR /app_server
 
 LABEL version="1.0.1"
 
+ENV ip_address="192.168.31.1"
+
 EXPOSE 80 29217
 
 LABEL permissions='{\
@@ -29,6 +31,8 @@ LABEL permissions='{\
   }\
   }\
   }'
+
+
 
 LABEL type="example"
 LABEL readme='https://github.com/jerWenger/blueos-tcp-mavlink-driver/blob/main/readme.md'

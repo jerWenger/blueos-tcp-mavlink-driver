@@ -4,7 +4,7 @@ from RC_OVERRIDE.mavlink2rest_helper import Mavlink2RestHelper
 import time
 import signal
 
-MAVLINK2REST_ADDRESS = "http://192.168.31.1/mavlink2rest"
+MAVLINK2REST_ADDRESS = "http://127.0.0.1/mavlink2rest"
 helper = Mavlink2RestHelper(MAVLINK2REST_ADDRESS)
 
 
@@ -79,4 +79,4 @@ def set_pwm(left_pwm, right_pwm, aux_pwm):
         right_pwm = 1510
 
     helper.send_rc_override([reversed_left, right_pwm, aux_pwm])
-    #print(f"Set Left: {reversed_left}, Set Right: {right_pwm}")
+    # print(f"Set Left: {reversed_left}, Set Right: {right_pwm}")
