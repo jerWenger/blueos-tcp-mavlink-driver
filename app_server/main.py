@@ -59,10 +59,10 @@ def frontseat_net_com(
             right_pwm = 0
             print("Disconnected from controller")
         elif autonomy_enabled:
-            # Data from Backseat
-            left_pwm = autopilot_data[0]
-            right_pwm = autopilot_data[1]
-            aux_pwm = autopilot_data[2]
+            if autopilot_data is not None:
+                left_pwm, right_pwm, aux_pwm = autopilot_data
+            else:
+                left_pwm, right_pwm, aux_pwm = 0, 0, 0  # Default values
 
         # Actuate
         try:
